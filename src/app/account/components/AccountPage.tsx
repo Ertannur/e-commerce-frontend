@@ -1,5 +1,5 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth/auth-context';
 import { useUser } from '@/lib/user/user-context';
 import Header from '@/app/components/Header';
@@ -14,10 +14,27 @@ export default function AccountPage() {
   const { profile, isLoading } = useUser();
   const router = useRouter();
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated - use useEffect to avoid setState during render
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, router]);
+
+  // Show loading or nothing while redirecting
   if (!isAuthenticated) {
-    router.push('/login');
-    return null;
+    return (
+      <>
+        <Header />
+        <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Yönlendiriliyor...</p>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
   }
 
   return (
