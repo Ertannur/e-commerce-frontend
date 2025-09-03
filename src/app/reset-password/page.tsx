@@ -2,11 +2,11 @@
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const { resetPassword } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -113,5 +113,21 @@ export default function ResetPasswordPage() {
       </main>
       <Footer />
     </>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <>
+        <Header />
+        <main className="min-h-screen flex items-center justify-center px-6 py-12">
+          <div>Yükleniyor...</div>
+        </main>
+        <Footer />
+      </>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

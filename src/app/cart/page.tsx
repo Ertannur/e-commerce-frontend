@@ -4,9 +4,20 @@ import Footer from "@/app/components/Footer";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+interface CartItem {
+  id: string;
+  title: string;
+  price: number;
+  quantity: number;
+  image: string;
+  size?: string;
+  code?: string;
+}
+
 export default function CartPage() {
+  const router = useRouter();
   // Şimdilik boş array (mock yok)
-  const [cartItems] = useState<any[]>([]);
+  const [cartItems] = useState<CartItem[]>([]);
 
   const shippingCost = 100;
   const orderTotal = cartItems.reduce(

@@ -10,7 +10,7 @@ import {
 } from "@heroicons/react/24/outline";
 
 export default function Header() {
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
 
   return (
     <header className="flex items-center justify-between px-6 py-4 shadow-sm">

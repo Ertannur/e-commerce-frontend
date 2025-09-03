@@ -1,28 +1,103 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useAuth } from "@/lib/auth/auth-context";
+import { useChat } from "@/lib/chat/chat-context";
+import { type DisplayMessage } from "@/lib/chat/types";
 
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<
-    { from: "user" | "support"; text: string }[]
-  >([]);
   const [input, setInput] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  
+  const { user, isAuthenticated } = useAuth();
+  const { 
+    state, 
+    sendMessage, 
+    loadChats, 
+    loadAvailableUsers, 
+    loadSupportUsers, 
+    setCurrentChatUser,
+    clearError 
+  } = useChat();
 
-  const sendMessage = () => {
-    if (!input.trim()) return;
-    setMessages([...messages, { from: "user", text: input }]);
-    setInput("");
-    // ileride buraya SignalR backend bağlantısı eklenecek
+  // User role check
+  const userRole = useMemo(() => {
+    if (!user || !user.roles) return null;
+    if (user.roles.includes('Admin')) return 'Admin';
+    if (user.roles.includes('Support')) return 'Support';
+    if (user.roles.includes('User')) return 'User';
+    return null;
+  }, [user]);
+
+  // Load available users on open
+  useEffect(() => {
+    if (!isOpen || !isAuthenticated) return;
+
+    if (userRole === 'Admin' || userRole === 'Support') {
+      loadAvailableUsers();
+    } else if (userRole === 'User') {
+      loadSupportUsers();
+    }
+  }, [isOpen, isAuthenticated, userRole, loadAvailableUsers, loadSupportUsers]);
+
+  // Auto-select first support user for regular users
+  useEffect(() => {
+    if (userRole === 'User' && state.supportUsers.length > 0 && !selectedUserId) {
+      const firstSupport = state.supportUsers[0];
+      setSelectedUserId(firstSupport.id);
+      setCurrentChatUser(firstSupport.id);
+      loadChats(firstSupport.id);
+    }
+  }, [userRole, state.supportUsers, selectedUserId, setCurrentChatUser, loadChats]);
+
+  // Transform messages for display
+  const displayMessages = useMemo<DisplayMessage[]>(() => {
+    if (!user) return [];
+    
+    return state.messages.map((msg, index) => ({
+      id: msg.id || `msg-${index}`,
+      from: msg.userId === user.id ? 'user' : 'other',
+      text: msg.message,
+      timestamp: msg.createdDate || msg.date || new Date().toISOString(),
+      userId: msg.userId
+    }));
+  }, [state.messages, user]);
+
+  const handleSendMessage = async () => {
+    if (!input.trim() || !selectedUserId || !user) return;
+    
+    try {
+      await sendMessage(selectedUserId, input);
+      setInput("");
+    } catch (error) {
+      console.error('Send message error:', error);
+    }
   };
 
+  const handleUserSelect = (userId: string) => {
+    setSelectedUserId(userId);
+    setCurrentChatUser(userId);
+    loadChats(userId);
+  };
+
+  // Don't show if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
-    <div className="fixed bottom-6 right-6">
+    <div className="fixed bottom-6 right-6 z-50">
       {isOpen ? (
         <div className="w-80 h-96 bg-white border rounded-lg shadow-xl flex flex-col overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-3 flex justify-between items-center">
             <span className="flex items-center gap-2 font-semibold text-sm">
               💬 ShopEase Destek
+              {userRole && (
+                <span className="text-xs bg-white/20 px-2 py-1 rounded">
+                  {userRole}
+                </span>
+              )}
             </span>
             <button
               onClick={() => setIsOpen(false)}
@@ -32,23 +107,68 @@ export default function ChatWidget() {
             </button>
           </div>
 
+          {/* User Selection (for Admin/Support) */}
+          {(userRole === 'Admin' || userRole === 'Support') && (
+            <div className="p-2 border-b bg-gray-50">
+              <select 
+                value={selectedUserId || ""}
+                onChange={(e) => e.target.value && handleUserSelect(e.target.value)}
+                className="w-full text-sm border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">Kullanıcı seçin...</option>
+                {state.availableUsers.map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.fullName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Error Display */}
+          {state.error && (
+            <div className="p-2 bg-red-50 border-b">
+              <div className="flex justify-between items-center">
+                <span className="text-red-600 text-xs">{state.error}</span>
+                <button 
+                  onClick={clearError}
+                  className="text-red-600 hover:text-red-800"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-3 space-y-2 text-sm bg-gray-50">
-            {messages.length === 0 ? (
+            {state.isLoading ? (
               <p className="text-gray-400 text-center mt-20">
-                Henüz mesaj yok
+                Yükleniyor...
+              </p>
+            ) : displayMessages.length === 0 ? (
+              <p className="text-gray-400 text-center mt-20">
+                {selectedUserId ? "Henüz mesaj yok" : "Konuşmak için kullanıcı seçin"}
               </p>
             ) : (
-              messages.map((msg, idx) => (
+              displayMessages.map((msg) => (
                 <div
-                  key={idx}
+                  key={msg.id}
                   className={`p-2 rounded-lg max-w-[70%] ${
                     msg.from === "user"
                       ? "bg-indigo-600 text-white ml-auto"
                       : "bg-gray-200 text-gray-800"
                   }`}
                 >
-                  {msg.text}
+                  <div>{msg.text}</div>
+                  <div className={`text-xs mt-1 ${
+                    msg.from === "user" ? "text-indigo-100" : "text-gray-500"
+                  }`}>
+                    {new Date(msg.timestamp).toLocaleTimeString('tr-TR', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </div>
                 </div>
               ))
             )}
@@ -60,12 +180,15 @@ export default function ChatWidget() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Mesaj yaz..."
-              className="flex-1 border rounded-full px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+              placeholder={selectedUserId ? "Mesaj yaz..." : "Önce kullanıcı seçin"}
+              disabled={!selectedUserId || state.isLoading}
+              className="flex-1 border rounded-full px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
             />
             <button
-              onClick={sendMessage}
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:opacity-90 transition"
+              onClick={handleSendMessage}
+              disabled={!input.trim() || !selectedUserId || state.isLoading}
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Gönder
             </button>
