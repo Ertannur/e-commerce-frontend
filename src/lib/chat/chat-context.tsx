@@ -165,6 +165,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         message: message.trim(),
       };
 
+      // Debug log
+      console.log('Sending message with data:', messageData);
+      console.log('Current user:', { 
+        id: user.id, 
+        email: user.email, 
+        firstName: user.firstName, 
+        lastName: user.lastName,
+        roles: user.roles 
+      });
+
       await ChatApiClient.sendMessage(messageData);
 
       // Optimistic update - mesajı hemen ekle

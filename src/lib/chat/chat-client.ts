@@ -99,10 +99,18 @@ export const ChatApiClient = {
    * @param messageData - Gönderilecek mesaj bilgileri
    */
   async sendMessage(messageData: SendMessageRequest): Promise<void> {
-    await apiRequest<void>('/api/Chat/SendMessage', {
-      method: 'POST',
-      body: JSON.stringify(messageData),
-    });
+    console.log('ChatApiClient.sendMessage called with:', messageData);
+    
+    try {
+      await apiRequest<void>('/api/Chat/SendMessage', {
+        method: 'POST',
+        body: JSON.stringify(messageData),
+      });
+      console.log('Message sent successfully');
+    } catch (error) {
+      console.error('SendMessage API error:', error);
+      throw error;
+    }
   },
 };
 

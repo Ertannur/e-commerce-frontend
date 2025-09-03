@@ -260,6 +260,9 @@ export const AuthClient = {
       
       const payload = JSON.parse(atob(parts[1]));
       
+      // Debug log - JWT payload'ını göster
+      console.log('JWT Payload:', payload);
+      
       // Token süresini kontrol et
       if (payload.exp && payload.exp * 1000 < Date.now()) {
         // Token süresi geçmiş, temizle
@@ -268,7 +271,7 @@ export const AuthClient = {
       }
 
       // Backend'den gelen JWT payload'ından user bilgisini çıkar
-      return {
+      const authUser = {
         id: payload.sub || payload.userId || "unknown",
         email: payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || payload.email || "unknown@example.com",
         firstName: payload.firstName || "",
@@ -280,6 +283,9 @@ export const AuthClient = {
           [payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']] : 
           (payload.roles || [])
       };
+      
+      console.log('Decoded AuthUser:', authUser);
+      return authUser;
     } catch (error) {
       console.error('Error decoding token:', error);
       return null;

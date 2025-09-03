@@ -66,6 +66,12 @@ export default function ChatWidget() {
   const handleSendMessage = async () => {
     if (!input.trim() || !selectedUserId || !user) return;
     
+    console.log('ChatWidget.handleSendMessage called:', {
+      input: input.trim(),
+      selectedUserId,
+      user: { id: user.id, email: user.email }
+    });
+    
     try {
       await sendMessage(selectedUserId, input);
       setInput("");
