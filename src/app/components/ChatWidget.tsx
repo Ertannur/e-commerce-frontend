@@ -44,6 +44,14 @@ export default function ChatWidget() {
   useEffect(() => {
     if (userRole === 'User' && state.supportUsers.length > 0 && !selectedUserId) {
       const firstSupport = state.supportUsers[0];
+      
+      console.log('=== Auto-selecting first support user ===');
+      console.log('User role:', userRole);
+      console.log('Support users count:', state.supportUsers.length);
+      console.log('Support users:', state.supportUsers);
+      console.log('First support user:', firstSupport);
+      console.log('Current selectedUserId:', selectedUserId);
+      
       setSelectedUserId(firstSupport.id);
       setCurrentChatUser(firstSupport.id);
       loadChats(firstSupport.id);
@@ -65,7 +73,36 @@ export default function ChatWidget() {
 
   const handleSendMessage = async () => {
     if (!input.trim() || !selectedUserId || !user) return;
+
+    // Guard: prevent sending if supportUsers is empty for regular users
+    if (userRole === 'User' && state.supportUsers.length === 0) {
+      console.warn('No support users available, cannot send message.');
+      return;
+    }
+
+    // Debug: Check if selectedUserId exists in the appropriate user list
+    const availableUsersList = userRole === 'User' ? state.supportUsers : state.availableUsers;
+    const selectedUser = availableUsersList.find(u => u.id === selectedUserId);
     
+    console.log('=== SendMessage Debug Info ===');
+    console.log('User Role:', userRole);
+    console.log('Available Users List:', availableUsersList);
+    console.log('Selected User ID:', selectedUserId);
+    console.log('Selected User Object:', selectedUser);
+    console.log('Support Users:', state.supportUsers);
+    console.log('Available Users:', state.availableUsers);
+    
+    if (!selectedUser) {
+      console.error('❌ Selected user not found in user list!', {
+        selectedUserId,
+        userRole,
+        availableCount: availableUsersList.length,
+        supportCount: state.supportUsers.length
+      });
+      return;
+    }
+
+    console.log('✅ Selected user validated:', selectedUser);
     console.log('ChatWidget.handleSendMessage called:', {
       input: input.trim(),
       selectedUserId,
@@ -81,6 +118,16 @@ export default function ChatWidget() {
   };
 
   const handleUserSelect = (userId: string) => {
+    console.log('=== User Selection Debug ===');
+    console.log('Selected user ID:', userId);
+    console.log('User role:', userRole);
+    console.log('Support users:', state.supportUsers);
+    console.log('Available users:', state.availableUsers);
+    
+    const userList = userRole === 'User' ? state.supportUsers : state.availableUsers;
+    const selectedUser = userList.find(u => u.id === userId);
+    console.log('Selected user object:', selectedUser);
+    
     setSelectedUserId(userId);
     setCurrentChatUser(userId);
     loadChats(userId);

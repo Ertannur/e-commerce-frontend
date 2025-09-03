@@ -116,17 +116,25 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   // Load support users (for regular Users)
   const loadSupportUsers = useCallback(async () => {
+    console.log('=== loadSupportUsers called ===');
+    
     if (!user) {
+      console.error('❌ User not authenticated');
       dispatch({ type: 'SET_ERROR', payload: 'User not authenticated' });
       return;
     }
+
+    console.log('User info:', { id: user.id, email: user.email, roles: user.roles });
 
     // Sadece User rolü support kullanıcılarını görebilir
     const isRegularUser = user.roles.includes('User') && 
                           !user.roles.includes('Admin') && 
                           !user.roles.includes('Support');
     
+    console.log('Is regular user?', isRegularUser);
+    
     if (!isRegularUser) {
+      console.error('❌ Access denied - not a regular user');
       dispatch({ type: 'SET_ERROR', payload: 'Access denied' });
       return;
     }
@@ -135,7 +143,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_ERROR', payload: null });
       
+      console.log('🔄 Calling ChatApiClient.getSupport()...');
       const supportUsers = await ChatApiClient.getSupport();
+      console.log('✅ Support users loaded:', supportUsers);
+      
       dispatch({ type: 'SET_SUPPORT_USERS', payload: supportUsers });
     } catch (error) {
       const apiError = handleChatApiError(error);

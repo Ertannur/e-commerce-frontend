@@ -37,8 +37,19 @@ const apiRequest = async <T>(
     },
   };
 
+  console.log('=== API Request ===');
+  console.log('URL:', url);
+  console.log('Method:', config.method || 'GET');
+  console.log('Headers:', config.headers);
+  if (config.body) {
+    console.log('Body:', config.body);
+  }
+
   try {
     const response = await fetch(url, config);
+    
+    console.log('Response status:', response.status);
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
     
     // 401 - Unauthorized
     if (response.status === 401) {
@@ -52,16 +63,20 @@ const apiRequest = async <T>(
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error('❌ API Error Response:', errorText);
       throw new Error(`API Error ${response.status}: ${errorText}`);
     }
 
     // 200 response ama body yok (SendMessage için)
     const contentType = response.headers.get('content-type');
     if (!contentType?.includes('application/json')) {
+      console.log('✅ API Success (no JSON response)');
       return {} as T;
     }
 
-    return await response.json();
+    const responseData = await response.json();
+    console.log('✅ API Success Response:', responseData);
+    return responseData;
   } catch (error) {
     console.error(`API request failed for ${endpoint}:`, error);
     throw error;
@@ -91,7 +106,15 @@ export const ChatApiClient = {
    * @returns Support kullanıcıları listesi
    */
   async getSupport(): Promise<GetSupportResponse> {
-    return apiRequest<GetSupportResponse>('/api/Chat/GetSupport');
+    console.log('ChatApiClient.getSupport called');
+    try {
+      const result = await apiRequest<GetSupportResponse>('/api/Chat/GetSupport');
+      console.log('GetSupport result:', result);
+      return result;
+    } catch (error) {
+      console.error('GetSupport API error:', error);
+      throw error;
+    }
   },
 
   /**
